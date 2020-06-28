@@ -1,2 +1,2 @@
 # status
-create a "status bar" to display messages and ask for user input
+jQuery plugins to create a "status bar" to display messages and to ask for user input
