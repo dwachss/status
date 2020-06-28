@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	
+	<link href='http://fonts.googleapis.com/css?family=VT323' rel='stylesheet' type='text/css'>
+	<script type="text/javascript" src="http://code.jquery.com/jquery-3.5.1.js"></script>
+	<script src="jquery.status.js"></script>
+	<script src="github.bililite.com/historystack/historystack.js"></script>
+	<style>
+		#message {
+			border: 1px solid black;
+			padding: 2px;
+		}
+		label {
+			display: flex;
+		}
+		input {
+			flex: auto;
+		}
+		#console {
+			margin: 20px;
+			background: black;
+			width: 80%;
+			height: 600px;
+			overflow-y: scroll;
+			padding: 30px;
+		}
+		#console * {
+			background: black;
+			color: green;
+			font-family: 'VT323';
+			font-size: 24px;
+			outline: none;	
+			margin: none;
+		}
+	</style>
+</head>
+<body>
+<nav>
+	<input type="button" value="Inline Prompt" id=inline />
+	<input type="button" value="Modal Prompt" id=modal />
+</nav>
+
+<div id="message"></div>
+
+<pre id=console >
+</pre>
+
+<script>
+$('#inline').click(()=>{
+	$('#message').
+		prompt('Enter a string:', 'testing').
+		then(text => text+' was returned').
+		then(text => alert(text)).
+		catch(e => alert ('Error' + e.message));
+});
+
+$('#modal').click(()=>{
+	$().
+		prompt('Enter a string: ', 'test').
+		then(text => alert(text)).
+		catch(e => alert ('Error' + e.message));
+});
+
+$.fn.type = function(text){
+  // based on http://onehackoranother.com/projects/jquery/jquery-grab-bag/text-effects.html typewriter effect
+  var span = $('<span>').appendTo(this).after('<span id="blinker" style="background: green">&nbsp;</span>');
+  var progress = 0;
+  var timer = setInterval (function(){
+    span.text(text.substr(0, progress++));
+     if (progress > text.length){
+      $('#blinker').remove();
+      clearInterval(timer);
+     }
+  },100);
+  return this;
+}
+
+function translate(message) {
+	return message.replace(/\w+/g, translateWord);
+}
+
+function translateWord(word) {
+	let index = (/[aeiou]/i.exec(word) || {index: -1}).index;
+	if (index == -1) return word;
+	if (index == 0) return word + 'way';
+	if (word.substr (index-1,2) == 'qu') ++index;
+	return word.slice(index) + word.slice(0,index) + 'ay';
+}
+
+function displayLine (text){
+	$('<p>').text('> '+text+'\n').appendTo('#console');
+	$('<p>').type(translate(text)+'\n').appendTo('#console');
+	$('#console').prompt('> ').then(displayLine).catch(displayError);
+}
+function displayError (err){
+	$('<p style=color:red>').text(err.message+'\n').appendTo('#console');
+	$('#console').prompt('> ').then(displayLine).catch(displayError);
+}
+$('#console').prompt('> ').then(displayLine).catch(displayError);
+	
+</script>
+
+</body></html>
