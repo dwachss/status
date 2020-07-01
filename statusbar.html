@@ -2,10 +2,14 @@
 <html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 	
 	<script type="text/javascript" src="http://code.jquery.com/jquery-3.5.1.js"></script>
-	<script src="src/jquery.status.js"></script>
-	<script src="src/bililiteRange.js"></script>
-	<script src="src/bililiteRange.util.js"></script>
-	<script src="src/jquery.livesearch.js"></script>
+	<script src="../timerevents/jquery.timer.js"></script>
+	<script src="../historystack/history.js"></script>
+	<script src="jquery.status.js"></script>
+	<!-- This demo shouldn't use bililiteRange until that project is brought up to date
+	<script src="../bililiteRange.js"></script>
+	<script src="../bililiteRange/bililiteRange.util.js"></script>
+	<script src="../bililiteRange/jquery.livesearch.js"></script>
+	-->
 	<style>
 		textarea{
 			box-sizing: border-box;
@@ -47,8 +51,9 @@
 <nav>
 	<input type="button" value="Simple Notification">
 	<input type="button" value="Text Input">
-	<input type="button" id="search" value="Live Search">
+	<!--<input type="button" id="search" value="Live Search">-->
 	<input type="button" id="random" value="Random Resolver">
+	<input type="button" id="reshow" value="Redisplay Last Result">
 </nav>
 <div class="panel" style="display: block;">
 	<input type="button" id="success" value="Succeed">
@@ -152,17 +157,15 @@ Curabitur sodales ligula in libero. Sed dignissim lacinia nunc. Curabitur tortor
 		$('body').off('.search', 'input');
 	});
 	
-	// Fancy settimeout wrapper
-	Promise.wait = ms => new Promise(resolve => setTimeout(resolve, ms));
-	Promise.thenwait = (ms) => (result) => Promise.wait(ms).then ( () => result );
 
 	$('#random').click(function(){
-//		whichoutput().status( Promise.wait(1000).then ( 
-//			() => Math.random() < 0.5 ? 'Yes' : new Error('No')
-//		));
-		whichoutput().status( Promise.resolve('Resolved').then(Promise.thenwait(1000)).then(
+		whichoutput().status( Promise.wait(1000).then ( 
 			() => Math.random() < 0.5 ? 'Yes' : new Error('No')
-		))
+		));
+	});
+	
+	$('#reshow').click( () => {
+		whichoutput().status( whichoutput().promise('prompt') );
 	});
 </script>
 

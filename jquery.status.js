@@ -36,7 +36,10 @@ $.fn.status = function(message, {
 	}={}){
 
 	message = Promise.resolve(message).then (
-		result => { if (result instanceof Error) throw result; return result } // Errors should be catch'ed, not then'ed 
+		result => {
+			if (result instanceof Error) throw result;  // Errors should be catch'ed, not then'ed
+			return result;
+		} 
 	);
 	this.data('prompt.promise', message);
 
@@ -48,6 +51,7 @@ $.fn.status = function(message, {
 
 	return this.each( function(){
 		message.then( text => {			
+			if ($.isFunction(text)) text = text.call();
 			if (this instanceof Node){
 				displayMessage (this, text, successClass);
 			}else{
@@ -104,12 +108,12 @@ $.fn.prompt = function (message = '', defaultValue = ''){
 		$('<strong>').text(message).prependTo(input);
 		input.show();
 
-		const history = this.data('prompt.history') || []; // a stack of past commands
+		const history = this.data('prompt.history') || new History(defaultValue);
 		this.data('prompt.history', history);
 
 		$('input',input).on('keyup', function (evt){
 			if (evt.key == 'Enter'){
-				history.push(this.value);
+				history.pushState(this.value);
 				resolve (this.value);
 				input.trigger('focusout').remove(); // Firefox doesn't trigger a blur when the element is removed
 				return false;
@@ -118,7 +122,11 @@ $.fn.prompt = function (message = '', defaultValue = ''){
 				input.trigger('focusout').remove(); // Firefox doesn't trigger a blur when the element is removed
 				return false;
 			}else if (evt.key == 'ArrowUp'){ 
-				this.value = history.pop();
+				this.value = history.state;
+				history.back();
+				$(this).trigger('input'); // always need to alert when the text changes
+			}else if (evt.key == 'ArrowDown'){
+				this.value = history.forward();
 				$(this).trigger('input'); // always need to alert when the text changes
 			}
 		}).on('keypress', function (evt){
