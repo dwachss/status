@@ -44,7 +44,7 @@ $.fn.status = function(message, {
 	this.data('prompt.promise', message);
 
 	function displayMessage(container, text, which){
-		const span = $('<span>').addClass(which).text(text).hide().prependTo(container);
+		const span = $('<span role=alert>').addClass(which).text(text).hide().prependTo(container);
 		display.call(span);
 		span.promise().done( ()=> span.remove() );
 	};
