@@ -5,11 +5,6 @@
 	<script src="../timerevents/jquery.timer.js"></script>
 	<script src="../historystack/history.js"></script>
 	<script src="jquery.status.js"></script>
-	<!-- This demo shouldn't use bililiteRange until that project is brought up to date
-	<script src="../bililiteRange.js"></script>
-	<script src="../bililiteRange/bililiteRange.util.js"></script>
-	<script src="../bililiteRange/jquery.livesearch.js"></script>
-	-->
 	<style>
 		textarea{
 			box-sizing: border-box;
@@ -35,14 +30,6 @@
 		.panel {
 			display: none;
 			border: 1px solid black;
-		}
-		pre.livesearch {
-			background: white;
-			box-shadow:         inset 0 0 10px #000000;
-		}
-		pre.livesearch span {
-			border: 1px solid #f0f;
-			color: #f0f;
 		}
 
 	</style>
@@ -131,32 +118,6 @@ Curabitur sodales ligula in libero. Sed dignissim lacinia nunc. Curabitur tortor
 	$('#revert').click(function(){
 		whichoutput().status(revert);
 	});
-	
-	var textarea = $('#text')[0];
-	$('#search').click(function(){
-		var rng = bililiteRange(textarea).bounds('selection');
-		function restoreTextarea() {
-			textarea.style.width = '100%'; // this gets set to a fixed number by texthighlight
-			textarea.focus();
-		}
-		whichoutput().
-			prompt('Regular Expression to Search For: ').
-			then( text => {
-				$.fn.livesearch.deletehighlight(rng); // Firefix isn't seeing the focusout event below when it is removed
-				rng.find(new RegExp(text)).select();
-				if (!rng.match){
-					throw {message: text+' not found'};
-				}
-				// not returning anything; no message shown
-			}).finally(restoreTextarea);
-		whichoutput().filter(function() {return this instanceof Node}).on('input.search keypress.search focus.search focusout.search', 'input', $(textarea).livesearch());
-	});
-	
-	// remove the livesearch
-	$('input[type=button][id!=search]').click(function(){
-		$('body').off('.search', 'input');
-	});
-	
 
 	$('#random').click(function(){
 		whichoutput().status( Promise.wait(1000).then ( 
