@@ -129,3 +129,8 @@ Object.defineProperty( Promise.prototype, 'alert', {
 	value: function (container) { return Promise.alert(this, container) }
 });
 ````
+
+I thought long and hard about this, since modifying the prototype of a built-in object is [considered harmful](https://www.kirupa.com/html5/extending_built_in_objects_javascript.htm) and will get
+you fired from [Google](https://google.github.io/styleguide/jsguide.html#disallowed-features-modifying-builtin-objects). But with
+`Object.defineProperty` the only downside is a collision with this name with another library or a future standard. Consider this a warning that
+if [whatwg](https://whatwg.org/) decides to implement `Promise.prototype.alert`, then things will break.
