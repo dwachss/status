@@ -8,6 +8,8 @@ The latter is a [non-enumerable property](https://developer.mozilla.org/en-US/do
 
 Optionally uses my [dwachss/historystack](https://github.com/dwachss/historystack).
 
+A previous version that was a set of plugins for jQuery is still available as [version 1.0](https://github.com/dwachss/status/releases/tag/v1.0). This release is completely different.
+
 ## `Promise.prompt`
 
 Asks for user input, just like `window.prompt(message, defaultValue)`, but *asynchronously*, so it returns a `Promise` that is resolved with the user input,
