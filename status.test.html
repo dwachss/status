@@ -115,5 +115,45 @@ test('escape immediately', async assert => {
 	});
 	assert.rejects (p, 'cancelling rejects promise');
 });
+test('use history ', async assert => {
+	const d = div();
+	Promise.prompt('prompt', d, 'value');
+	d.querySelector('input').value = 'second value';
+	sendKey('Enter', d.querySelector('input'));
+	const p = Promise.prompt('prompt', d, 'third value');	
+	sendKey('ArrowUp', d.querySelector('input'));
+	sendKey('Enter', d.querySelector('input'));
+	p.then(result => {
+		assert.equal(result, 'second value', 'history back works');
+		assert.notOk(d.innerHTML, 'multiple prompts removed after enter');
+	});
+	const p2 = Promise.prompt('prompt', d, 'fourth value');	
+	sendKey('ArrowUp', d.querySelector('input'));
+	sendKey('ArrowDown', d.querySelector('input'));
+	sendKey('Enter', d.querySelector('input'));
+	p2.then(result => {
+		assert.equal(result, 'second value', 'history forward works');
+		assert.notOk(d.innerHTML, 'multiple prompts removed after enter');
+		d.remove();
+	});
+});
+
+QUnit.module('prompt to object');
+test('resolve', async assert => {
+	const p = Promise.prompt('prompt', {prompt: (promptMessage, defaultValue) => {
+		assert.equal(promptMessage, 'prompt', 'correct prompt');
+		assert.equal(defaultValue, 'value', 'correct value');
+		return 'value';
+	}}, 'value');
+	p.then(result => {
+		assert.equal(result, 'value', 'default value returned');
+	});
+});
+test('reject', assert => {
+	const p = Promise.prompt('prompt', {prompt: () => null}, 'value');
+	assert.rejects( p, 'null from prompt rejects');
+	p.catch(x=>x); // need to handle the rejection
+});
+
 </script>
 </body>
