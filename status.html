@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>Status testing</title>
+<link rel="stylesheet" href="https://code.jquery.com/qunit/qunit-2.19.4.css">
+
+<body>
+<div id="qunit"></div>
+<div id="qunit-fixture"></div>
+<script src="https://code.jquery.com/qunit/qunit-2.19.4.js"></script>
+<script src="https://github.bililite.com/historystack/history.js"></script>
+<script>
+
+Promise.alert = (message, container = globalThis) => {
+	return Promise.resolve(message).then( message => {
+		if (message instanceof Error) throw message; 
+		if (container instanceof HTMLElement){
+			displayMessage(container, message, Promise.alert.classes.success);
+		}else{
+			(container.log ?? container.alert)(message);
+		}
+		return message;
+	}).catch(error => {
+		if (container instanceof HTMLElement){
+			displayMessage(container, error.message ?? error, Promise.alert.classes.failure);
+		}else{
+			error = error.message ?? error;
+			if (!container.error) error = `\u26A0\uFE0F ${error}`; // add warning emoji
+			(container.error ?? container.alert)(error);
+		}
+	});
+
+	function displayMessage (container, message, classname = Promise.alert.classes.success){
+		const span = document.createElement('span');
+		span.classList.add(classname);
+		span.textContent = message;
+		span.setAttribute('role', 'alert');
+		span.ontransitionend = evt => span.remove();
+		container.prepend(span);
+		setTimeout(()=>span.classList.add(Promise.alert.classes.hidden), 10);
+	}
+
+}
+
+Object.defineProperty( Promise.prototype, 'alert', {
+	value: function (container) { return Promise.alert(this, container) }
+});
+
+Promise.alert.classes = {
+	success: 'success',
+	failure: 'failure',
+	hidden: 'hidden'
+};
+
+Promise.prompt = (promptMessage = '', container = globalThis, defaultValue = '') => {
+	if (container instanceof HTMLElement){
+		return new Promise ((resolve, reject) => displayPrompt(resolve, reject)).
+			finally( () => container.querySelectorAll('label.prompt').forEach( el => el.remove() ) );
+	}else{
+		return new Promise ((resolve, reject) => {
+			const response = container.prompt(promptMessage, defaultValue);
+			if (response === null) reject (new Error(Promise.prompt.cancelMessage));
+			resolve(response);
+		});
+	}
+					
+	function history(){
+		const key = Symbol.for('Promise.prompt.history');
+		if (key in container) return container[key];
+		try{
+			return container[key] = new History(defaultValue);
+		}catch{
+			// if my history stack is not implemented, the original History constructor will throw a TypeError
+			return null;
+		}
+	}
+
+	function displayPrompt(resolve, reject){
+		container.querySelectorAll('label.prompt').forEach( el => el.remove() ); // remove any old elements
+		const label = document.createElement('label');
+		label.className = 'prompt';
+		label.append(document.createElement('strong'), document.createElement('input'));
+		label.querySelector('strong').textContent = promptMessage;
+		label.querySelector('input').value = defaultValue;
+		label.querySelector('input').addEventListener('keydown', function(evt) {
+			switch (evt.key){
+			case 'Enter':
+				resolve(this.value);
+				break;
+			case 'Escape':
+				reject (new Error(Promise.prompt.cancelMessage));
+				break;
+			}
+		});
+		const h = history();
+		if (h) label.querySelector('input').addEventListener('keydown', function(evt) {
+			switch (evt.key){
+			case 'Enter':
+				h.pushState(this.value);
+				break;
+			case 'ArrowUp':
+				if (h.atEnd){
+					h.pushState(this.value);
+					h.back();
+				}
+				this.value = h.state;
+				h.back();
+				evt.preventDefault();
+				break;
+			case 'ArrowDown':
+				this.value = h.forward();
+				evt.preventDefault();
+			break;
+			}
+		});
+		container.prepend(label);
+		label.querySelector('input').focus();
+	}
+
+}
+
+Promise.prompt.cancelMessage = "User Cancelled";
+
+</script>
+<script>
+const { test } = QUnit;
+
+QUnit.module('alert to object');
+test('alert to object.alert', assert => {
+	return Promise.alert('good', {
+		alert: message => assert.equal(message, 'good')
+	});
+});
+test('alert to object.log', assert => {
+	return Promise.alert('good', {
+		log: message => assert.equal(message, 'good')
+	});
+});
+test('alert Promise.resolve to object.log', assert => {
+	return Promise.alert(Promise.resolve('good'), {
+		log: message => assert.equal(message, 'good')
+	});
+});
+test('Promise.resolve to alert object.log', assert => {
+	return Promise.resolve('good').alert({
+		log: message => assert.equal(message, 'good')
+	});
+});
+test('reject to object.alert', assert => {
+	return Promise.alert(new Error('bad'), {
+		alert: message => assert.equal(message, `\u26A0\uFE0F bad`)
+	});
+});
+test('reject to object.error', assert => {
+	return Promise.alert(new Error('bad'), {
+		error: message => assert.equal(message, `bad`)
+	});
+});
+test('alert Promise.reject to object.error', assert => {
+	return Promise.alert(Promise.reject('bad'), {
+		error: message => assert.equal(message, `bad`)
+	});
+});
+test('Promise.reject to alert to object.error', assert => {
+	return Promise.reject('bad').alert({
+		error: message => assert.equal(message, `bad`)
+	});
+});
+
+QUnit.module('alert to element');
+function div() {
+	// can't use #qunit-fixture because it fills with all the other messages before being cleared.
+	const d = document.createElement('div');
+	document.body.append(d);
+	return d;
+}
+test('alert to element', assert => {
+	const d = div();
+	return Promise.alert('good', d).then(message =>{
+		assert.equal(message, d.textContent, 'text set correctly');
+		assert.true(d.querySelector('span').classList.contains('success'), 'class set correctly');
+		d.remove();
+	});
+});
+test('error to element', assert => {
+	const d = div();
+	return Promise.alert(new Error('bad'), d).then(message =>{
+		assert.equal(message, undefined, 'Promise resolved from rejection');
+		assert.equal(d.textContent, 'bad', 'text set correctly');
+		assert.true(d.querySelector('span').classList.contains('failure'), 'class set correctly');
+		d.remove();
+	});
+});
+
+function sendKey(key, el){
+	el.dispatchEvent(new KeyboardEvent('keydown', {key}));
+}
+QUnit.module('prompt to element');
+test('enter immediately', async assert => {
+	const d = div();
+	const p = Promise.prompt('prompt', d, 'value');
+	assert.equal(d.textContent, 'prompt', 'prompt set correctly');
+	sendKey('Enter', d.querySelector('input'));
+	p.then(result => {
+		assert.equal(result, 'value', 'default value returned');
+		assert.notOk(d.innerHTML, 'prompt removed after enter');
+		d.remove();
+	});
+});
+test('enter new value', async assert => {
+	const d = div();
+	const p = Promise.prompt('prompt', d, 'value');
+	d.querySelector('input').value = 'new value';
+	sendKey('Enter', d.querySelector('input'));
+	p.then(result => {
+		assert.equal(result, 'new value', 'new value returned');
+		d.remove();
+	});
+});
+test('escape immediately', async assert => {
+	const d = div();
+	const p = Promise.prompt('prompt', d, 'value');
+	sendKey('Escape', d.querySelector('input'));
+	p.catch(result => {
+		assert.equal(result.message, 'User Cancelled', 'cancel error');
+		assert.notOk(d.innerHTML, 'prompt removed after escape');
+		d.remove();
+	});
+	assert.rejects (p, 'cancelling rejects promise');
+});
+</script>
+</body>
