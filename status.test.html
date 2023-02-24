@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>Status testing</title>
+<link rel="stylesheet" href="https://code.jquery.com/qunit/qunit-2.19.4.css">
+
+<body>
+<div id="qunit"></div>
+<div id="qunit-fixture"></div>
+<script src="https://code.jquery.com/qunit/qunit-2.19.4.js"></script>
+<script src="https://github.bililite.com/historystack/history.js"></script>
+<script src=status.js></script>
+<script>
+const { test } = QUnit;
+
+QUnit.module('alert to object');
+test('alert to object.alert', assert => {
+	return Promise.alert('good', {
+		alert: message => assert.equal(message, 'good')
+	});
+});
+test('alert to object.log', assert => {
+	return Promise.alert('good', {
+		log: message => assert.equal(message, 'good')
+	});
+});
+test('alert Promise.resolve to object.log', assert => {
+	return Promise.alert(Promise.resolve('good'), {
+		log: message => assert.equal(message, 'good')
+	});
+});
+test('Promise.resolve to alert object.log', assert => {
+	return Promise.resolve('good').alert({
+		log: message => assert.equal(message, 'good')
+	});
+});
+test('reject to object.alert', assert => {
+	return Promise.alert(new Error('bad'), {
+		alert: message => assert.equal(message, `\u26A0\uFE0F bad`)
+	});
+});
+test('reject to object.error', assert => {
+	return Promise.alert(new Error('bad'), {
+		error: message => assert.equal(message, `bad`)
+	});
+});
+test('alert Promise.reject to object.error', assert => {
+	return Promise.alert(Promise.reject('bad'), {
+		error: message => assert.equal(message, `bad`)
+	});
+});
+test('Promise.reject to alert to object.error', assert => {
+	return Promise.reject('bad').alert({
+		error: message => assert.equal(message, `bad`)
+	});
+});
+
+QUnit.module('alert to element');
+function div() {
+	// can't use #qunit-fixture because it fills with all the other messages before being cleared.
+	const d = document.createElement('div');
+	document.body.append(d);
+	return d;
+}
+test('alert to element', assert => {
+	const d = div();
+	return Promise.alert('good', d).then(message =>{
+		assert.equal(message, d.textContent, 'text set correctly');
+		assert.true(d.querySelector('span').classList.contains('success'), 'class set correctly');
+		d.remove();
+	});
+});
+test('error to element', assert => {
+	const d = div();
+	return Promise.alert(new Error('bad'), d).then(message =>{
+		assert.equal(message, undefined, 'Promise resolved from rejection');
+		assert.equal(d.textContent, 'bad', 'text set correctly');
+		assert.true(d.querySelector('span').classList.contains('failure'), 'class set correctly');
+		d.remove();
+	});
+});
+
+function sendKey(key, el){
+	el.dispatchEvent(new KeyboardEvent('keydown', {key}));
+}
+QUnit.module('prompt to element');
+test('enter immediately', async assert => {
+	const d = div();
+	const p = Promise.prompt('prompt', d, 'value');
+	assert.equal(d.textContent, 'prompt', 'prompt set correctly');
+	sendKey('Enter', d.querySelector('input'));
+	p.then(result => {
+		assert.equal(result, 'value', 'default value returned');
+		assert.notOk(d.innerHTML, 'prompt removed after enter');
+		d.remove();
+	});
+});
+test('enter new value', async assert => {
+	const d = div();
+	const p = Promise.prompt('prompt', d, 'value');
+	d.querySelector('input').value = 'new value';
+	sendKey('Enter', d.querySelector('input'));
+	p.then(result => {
+		assert.equal(result, 'new value', 'new value returned');
+		d.remove();
+	});
+});
+test('escape immediately', async assert => {
+	const d = div();
+	const p = Promise.prompt('prompt', d, 'value');
+	sendKey('Escape', d.querySelector('input'));
+	p.catch(result => {
+		assert.equal(result.message, 'User Cancelled', 'cancel error');
+		assert.notOk(d.innerHTML, 'prompt removed after escape');
+		d.remove();
+	});
+	assert.rejects (p, 'cancelling rejects promise');
+});
+test('use history ', async assert => {
+	const d = div();
+	Promise.prompt('prompt', d, 'value');
+	d.querySelector('input').value = 'second value';
+	sendKey('Enter', d.querySelector('input'));
+	const p = Promise.prompt('prompt', d, 'third value');	
+	sendKey('ArrowUp', d.querySelector('input'));
+	sendKey('Enter', d.querySelector('input'));
+	p.then(result => {
+		assert.equal(result, 'second value', 'history back works');
+		assert.notOk(d.innerHTML, 'multiple prompts removed after enter');
+	});
+	const p2 = Promise.prompt('prompt', d, 'fourth value');	
+	sendKey('ArrowUp', d.querySelector('input'));
+	sendKey('ArrowDown', d.querySelector('input'));
+	sendKey('Enter', d.querySelector('input'));
+	p2.then(result => {
+		assert.equal(result, 'second value', 'history forward works');
+		assert.notOk(d.innerHTML, 'multiple prompts removed after enter');
+		d.remove();
+	});
+});
+
+QUnit.module('prompt to object');
+test('resolve', async assert => {
+	const p = Promise.prompt('prompt', {prompt: (promptMessage, defaultValue) => {
+		assert.equal(promptMessage, 'prompt', 'correct prompt');
+		assert.equal(defaultValue, 'value', 'correct value');
+		return 'value';
+	}}, 'value');
+	p.then(result => {
+		assert.equal(result, 'value', 'default value returned');
+	});
+});
+test('reject', assert => {
+	const p = Promise.prompt('prompt', {prompt: () => null}, 'value');
+	assert.rejects( p, 'null from prompt rejects');
+	p.catch(x=>x); // need to handle the rejection
+});
+
+</script>
+</body>
