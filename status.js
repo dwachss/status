@@ -13,12 +13,12 @@ Promise.alert = (message, container = globalThis) => {
 		return message;
 	}).catch(error => {
 		if (container instanceof HTMLElement){
-			displayMessage(container, error.message ?? error, Promise.alert.classes.failure);
+			displayMessage(container, error, Promise.alert.classes.failure);
 		}else{
-			error = error.message ?? error;
-			if (!container.error) error = `\u26A0\uFE0F ${error}`; // add warning emoji
-			(container.error ?? container.alert)(error);
+			const message = container.error ? error : `\u26A0\uFE0F ${error}`; // add warning emoji
+			(container.error ?? container.alert)(message);
 		}
+		return error; // create a fulfilled promise with the error, if the user wants to do something more
 	});
 
 	function displayMessage (container, message, classname = Promise.alert.classes.success){
@@ -76,9 +76,11 @@ Promise.prompt = (promptMessage = '', container = globalThis, defaultValue = '')
 		label.querySelector('input').addEventListener('keydown', function(evt) {
 			switch (evt.key){
 			case 'Enter':
+				evt.preventDefault();
 				resolve(this.value);
 				break;
 			case 'Escape':
+				evt.preventDefault();
 				reject (new Error(Promise.prompt.cancelMessage));
 				break;
 			}
